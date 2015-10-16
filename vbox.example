@@ -1,0 +1,28 @@
+# Config file for virtualbox init script
+# /etc/conf.d/vbox.${VMS}
+
+# Name of Virtual machine
+VMS="test"
+
+# User name to run the vm under
+# User must be owner of vm, listed under their VBoxManage list vms !!!!
+USERNAME="root"
+
+# State to start the vm in:
+# options are:
+#	gui
+#	sdl
+#	headless
+#	separate
+STARTSTATE="headless"
+
+# State to stop the vm
+# - options are:
+#	pause
+#	resume
+#	reset
+#	poweroff
+#	savestate 
+#       acpipowerbutton
+#	acpisleepbutton
+STOPSTATE="savestate"
