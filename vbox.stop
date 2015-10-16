@@ -1,0 +1,94 @@
+#!/bin/sh
+# /etc/vboxd/vboxd.stop
+
+# Config file of VM to start
+source ${1}
+
+# Dmesg Function
+dmsg_fn() {
+	echo ${_note} > /dev/kmsg
+}
+
+# User Name Test
+user_name_test() {
+	grep -w "${USERNAME}" /etc/passwd > /dev/null
+}
+
+# Root VM Availible Test
+root_vms_test() {
+	VBoxManage list vms | grep "${VMS}"
+}
+
+# User VM Availible Test
+user_vms_test() {
+	su "${USERNAME}" <<-END
+	VBoxManage list vms | grep "${VMS}"
+	END
+}
+
+#VM Running Test
+user_vms_running_test() {
+	su "${USERNAME}" <<-END
+	VBoxManage list runningvms | grep "${VMS}"
+	END
+}
+
+# Check Config
+checkconfig() {
+	# Root User Test
+	if [ "${USERNAME}" = "root" ]; then
+		# Root VM Test
+		if [ -z root_vms_test ]; then
+			exit
+		fi
+	else
+		# Check User Name
+		if [ -z user_name_test ] ;then
+			exit
+		fi
+		# Check User VM
+		if [ -z user_vms_test ]; then
+			exit
+		fi
+	fi
+}
+
+# Stop VM as root
+rootstop_d() {
+	if [ -z $(VBoxManage list runningvms | grep "${VMS}" > /dev/null || echo 1) ]; then
+		_note="Shutting Down: ${VMS} , stopping with: ${STOPSTATE}"
+		dmsg_fn
+		VBoxManage controlvm "${VMS}" "${STOPSTATE}"
+	else
+		_warn="${VMS} is not running..."
+		dmsg_fn ; exit
+	fi
+}
+
+userstop_d() {
+	if [ -z $(
+		su "${USERNAME}" <<-END
+		VBoxManage list runningvms | grep "${VMS}" > /dev/null || echo 1
+		END
+		) ]; then
+			_note="Shutting Down: ${VMS} , stopping with: ${STOPSTATE}"
+			dmsg_fn
+			su "${USERNAME}" <<-END
+			VBoxManage controlvm "${VMS}" "${STOPSTATE}"
+			END
+		else
+			_warn="${VMS} is not running..."
+			dmsg_fn ; exit
+		fi
+}
+
+stopstate() {
+	checkconfig
+	if [ "${USERNAME}" = "root" ]; then
+		rootstop_d
+	else
+		userstop_d
+	fi
+}
+
+stopstate
