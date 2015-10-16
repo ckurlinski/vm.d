@@ -1,0 +1,42 @@
+#!/sbin/runscript
+# /etc/init.d/vbox.tmpl
+
+: ${VBOX_CONFDIR=/etc/conf.d}
+: ${VBOX_CONF=/etc/conf.d/${RC_SVCNAME}}
+: ${VBOX_CMDDIR:=/etc/vboxd}
+: ${VBOX_CMD_START=${VBOX_CMDDIR}/vboxd.start}
+: ${VBOX_CMD_STOP=${VBOX_CMDDIR}/vboxd.stop}
+
+#
+# Use this up as a symbolic link the the VMS name
+#	ls -s /etc/init.d/vbox.tmpl /etc/init.d/vbox.{Name of VMS}
+# Then make a copy of vbox.example in /etc/conf.d/
+#	adjust the vars accordingly and save the file inside
+#	/etc/conf.d/ dir . /etc/conf.d/vbox.{Name of VMS}
+# The (2) files - vboxd.start , vboxd.stop are located
+# in /etc/vboxd dir.
+# Virtualbox creates a /etc/vbox dir, so to prevent any collision
+#	create /etc/vboxd and cp vboxd.{start,stop} there
+#
+
+# This is to prevent the tmpl file from being started.
+_vbox=${RC_SVCNAME#vbox.}
+_vm=${VM:-$_vbox}
+[ "$_vm" = "tmpl" ] && exit 0
+
+depend() {
+	need localmount
+	after bootmisc
+}
+
+start() {
+	ebegin "Starting ${SVCNAME}"
+	"${VBOX_CMD_START}" $(echo "${VBOX_CONF}")
+	eend $?
+}
+
+stop() {
+	ebegin "Stopping ${SVCNAME}"
+	"${VBOX_CMD_STOP}" $(echo "${VBOX_CONF}")
+	eend $?
+}
