@@ -1,0 +1,92 @@
+#!/bin/sh
+# /etc/vboxd/vboxd.start
+
+# Config file of VM to start
+source ${1}
+
+# Dmesg Function
+dmsg_fn() {
+	echo ${_note} > /dev/kmsg
+}
+
+# User Name Test
+user_name_test() {
+	grep -w "${USERNAME}" /etc/passwd > /dev/null
+}
+
+# Root VM Availible Test
+root_vms_test() {
+	VBoxManage list vms | grep "${VMS}"
+}
+
+# User VM Availible Test
+user_vms_test() {
+	su "${USERNAME}" <<-END
+	VBoxManage list vms | grep "${VMS}"
+	END
+}
+
+#VM Running Test
+user_vms_running_test() {
+	su "${USERNAME}" <<-END
+	VBoxManage list runningvms | grep "${VMS}"
+	END
+}
+
+# Check Config
+checkconfig() {
+	# Root User Test
+	if [ "${USERNAME}" = "root" ]; then
+		# Root VM Test
+		if [ -z root_vms_test ]; then
+			exit
+		fi
+	else
+		# Check User Name
+		if [ -z user_name_test ] ;then
+			exit
+		fi
+		# Check User VM
+		if [ -z user_vms_test ]; then
+			exit
+		fi
+	fi
+}
+
+# Start VM as root
+rootstart_d() {
+	if [ -z $(VBoxManage list runningvms | grep "${VMS}" > /dev/null || echo 1) ]; then
+		_note="${VMS} is not running..."
+		dmsg_fn ; exit
+	else
+		_note="Starting Virtual Machine: ${VMS}"
+		dmsg_fn
+		VBoxManage startvm "${VMS}" --type "${STARTSTATE}"
+	fi
+}
+
+# Start VM as user
+userstart_d() {
+	if [ -z user_vms_running_test ]; then
+		_note="${VMS} is not running..."
+		dmsg_fm ; exit
+	else
+		_note="Starting Virtual Machine: ${VMS}"
+		dmsg_fn
+		su "${USERNAME}" <<-END
+		VBoxManage startvm "${VMS}" --type "${STARTSTATE}"
+		END
+	fi
+}
+
+# Start
+startstate() {
+	checkconfig
+	if [ "${USERNAME}" = "root" ]; then
+		rootstart_d
+	else
+		userstart_d
+	fi
+}
+
+startstate
